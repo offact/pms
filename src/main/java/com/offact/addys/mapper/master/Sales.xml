@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Sales">
+
+<resultMap id="salesVO" type="com.offact.addys.vo.master.SalesVO" >
+  <result column="salesDate"      property="salesDate"  />
+  <result column="groupId"          property="groupId"  />
+  <result column="groupName"      property="groupName"  />
+  <result column="updateDateTime"      property="updateDateTime"  />
+  <result column="updateUserId"      property="updateUserId"  />
+  <result column="updateUserName"     property="updateUserName"  />
+  <result column="productCode"          property="productCode"  />
+  <result column="productName"           property="productName"  />
+  <result column="salesCnt"        property="salesCnt"  />
+  <result column="productPrice"        property="productPrice"  />
+  <result column="supplyPrice"        property="supplyPrice"  />
+  <result column="vat"        property="vat"  />
+  <result column="salesPrice"        property="salesPrice"  />
+</resultMap>
+
+<select id="getSalesPageList"  resultMap="salesVO" parameterType="com.offact.addys.vo.master.SalesVO" >
+        SELECT T1.salesDate
+			  ,T1.groupId
+			  ,T2.groupName
+			  ,DATE_FORMAT(T1.updateDateTime,'%Y-%m-%d %T') as updateDateTime
+			  ,T1.updateUserId
+			  ,T3.userName as updateUserName 
+			  ,SUM(T4.salesCnt) as salesCnt
+              ,SUM(T4.productPrice) as productPrice
+              ,SUM(T4.salesPrice) as salesPrice 
+          FROM adSales T1
+               Left Join ofGroup T2 On T1.groupId=T2.groupId
+          	   Left Join ofUser T3 On T1.updateUserId=T3.userId
+          	   Left Join adSalesDetail T4 On T1.salesDate = T4.salesDate And T1.groupId=T4.groupId
+         WHERE T1.salesDate between #{start_salesDate} and #{end_salesDate}
+            <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           		AND T1.groupId = #{con_groupId}
+           </if>
+         GROUP BY T1.salesDate,T1.groupId
+         ORDER BY updateDateTime desc
+ LIMIT ${page_limit_val1} , ${page_limit_val2}
+</select>
+
+<select id="getSalesCnt" resultType="int">
+		SELECT count(*) AS TOT_COUNT
+  			FROM adSales
+ 			 WHERE salesDate between #{start_salesDate} and #{end_salesDate}
+            <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           		AND groupId = #{con_groupId}
+           </if>
+</select>
+
+<select id="getSalesDetailPageList"  resultMap="salesVO" parameterType="com.offact.addys.vo.master.SalesVO" >
+        SELECT T1.productCode
+			  ,T2.productName
+			  ,T1.salesCnt
+	          ,T1.productPrice
+	          ,T1.supplyPrice
+	          ,T1.vat
+	          ,T1.salesPrice
+          FROM adSalesDetail T1
+  			   Left Join adProductMaster T2 On T1.productCode=T2.productCode
+ 			WHERE salesDate = #{salesDate}
+              AND groupId = #{groupId}
+           <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           AND T1.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           AND T2.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if>
+         ORDER BY productCode desc
+ LIMIT ${page_limit_val1} , ${page_limit_val2}
+</select>
+
+<select id="getSalesDetailCnt" resultType="int">
+		SELECT count(*) AS TOT_COUNT
+  			FROM adSalesDetail T1
+  			    Left Join adProductMaster T2 On T1.productCode=T2.productCode
+ 			WHERE salesDate = #{salesDate}
+              AND groupId = #{groupId}
+           <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           AND T1.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           AND T2.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if>
+</select>
+
+<delete id="salesDeleteAll" parameterType="com.offact.addys.vo.master.SalesVO" >
+        Delete
+		From adSales
+ 		Where salesDate = #{salesDate}
+ 		  And groupId = #{groupId}
+</delete>
+
+<delete id="salesDetailDeleteAll" parameterType="com.offact.addys.vo.master.SalesVO" >
+        Delete
+		From adSalesDetail
+ 		Where salesDate = #{salesDate}
+ 		  And groupId = #{groupId}
+</delete>
+
+<insert id="insertSales"  parameterType="com.offact.addys.vo.master.SalesVO" >
+		insert into adSales (
+				 salesDate
+            	,groupId
+            	,updateDateTime 
+            	,updateUserId
+		)values(
+				 #{salesDate}
+	  			, #{groupId}
+	  			, now()
+	  			, #{updateUserId}
+		)
+		                        
+</insert>
+
+<insert id="insertExcelSalesdDetail"  parameterType="com.offact.addys.vo.master.SalesVO" >
+		insert into adSalesDetail (
+				 salesDate
+            	,groupId
+            	,productCode 
+            	,salesCnt
+            	,productPrice
+            	,supplyPrice
+            	,vat
+            	,salesPrice
+		)values(
+				 #{salesDate}
+	  			, #{groupId}
+	  			, #{productCode}
+	  			, #{salesCnt}
+	  			, #{productPrice}
+	  			, #{supplyPrice}
+	  			, #{vat}
+	  			, #{salesPrice}
+		)
+		                        
+</insert>
+
+</mapper>

@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Gmroi">
+
+<resultMap id="gmroiVO" type="com.offact.addys.vo.analysis.GmroiVO" >
+  <result column="groupId"              property="groupId"  />
+  <result column="groupName"            property="groupName"  />
+  <result column="userId"      	   property="userId"  />
+  <result column="userName"       	   property="userName"  />
+  <result column="gmroi"       	   property="gmroi"  />
+  <result column="productCode"       	   property="productCode"  />
+  <result column="productName"       	   property="productName"  />
+  <result column="group1"              property="group1"  />
+  <result column="group1Name"                property="group1Name"  />
+  <result column="group2"                property="group2"  />
+  <result column="group2Name"                property="group2Name"  />
+  <result column="group3"                property="group3"  />
+  <result column="group3Name"                property="group3Name"  />
+  <result column="avgStockCnt"                property="avgStockCnt"  />
+  <result column="avgStockAmt"                property="avgStockAmt"  />
+  <result column="totalSaleCnt"                property="totalSaleCnt"  />
+  <result column="totalSaleAmt"                property="totalSaleAmt"  />
+  <result column="profitSaleAmt"                property="profitSaleAmt"  />
+  <result column="avgSaleRate"                property="avgSaleRate"  />
+  <result column="stockCycleRate"                property="stockCycleRate"  />
+  <result column="gmroiRate"                property="gmroiRate"  />
+</resultMap>
+
+<select id="getGmroiPageList"  resultMap="gmroiVO" parameterType="com.offact.addys.vo.analysis.GmroiVO" >
+Select T4.productCode,
+       T4.productName,
+       T4.group1Name,
+       T4.group2Name,
+       T4.group3Name,
+       ifnull(truncate(T4.stockCnt/T4.avgCnt,2),0) as avgStockCnt,/*평균재고수량*/
+       ifnull(round(T4.stockPrice/T4.avgCnt),0) as avgStockAmt,/*평균재고금액*/          
+       ifnull(T4.totalSaleCnt,0) as totalSaleCnt,/*총매출수량*/
+       ifnull(T4.totalSaleAmt,0) as totalSaleAmt,/*총매출금액*/
+       ifnull((T4.totalSaleAmt-T4.salePriceAmt),0) as profitSaleAmt,/*총 이익금액*/
+       ifnull((floor((ifnull((T4.totalSaleAmt-T4.salePriceAmt),0)/ifnull(T4.totalSaleAmt,0))*10000)*0.01),0) as avgSaleRate,
+       ifnull((floor((ifnull(T4.totalSaleAmt,0)/floor(ifnull(round(T4.stockPrice/T4.avgCnt),0)))*100)*0.01),0) as stockCycleRate,
+       ifnull((round(( ifnull((T4.totalSaleAmt-T4.salePriceAmt),0)/floor(round(T4.stockPrice/T4.avgCnt)))*10000)*0.01),0) as gmroiRate   
+From (       
+      Select T1.productCode,
+             T1.productName,
+             T1.group1Name,
+             T1.group2Name,
+             T1.group3Name,
+             T6.avgProdPrice, /*평균원가금액*/ 
+             T6.avgCnt, /*평균카운트*/
+             T3.stockCnt,/*총재고수량*/
+             T3.stockPrice,/*총재고금액*/
+             T2.salesCnt as totalSaleCnt,/*총매출수량*/
+             T2.salesPrice as totalSaleAmt,/*총매출금액*/ 
+             (T6.avgProdPrice*T2.salesCnt)as salePriceAmt/*총판매원가금액*/
+      from adProductMaster T1
+      Left Join (
+                  Select productCode,
+                         Sum(salesCnt) as salesCnt,/*매출수량*/
+                         Sum(salesPrice) as salesPrice/*매출금액*/
+                  from adSalesDetail 
+                  Where salesDate between date_add(#{start_saleDate}, interval 1 day)  And date_add(#{end_saleDate}, interval 1 day) 
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+                  group by productCode
+                  ) T2 On T1.productCode=T2.productCode        
+      Left Join (
+                  Select productCode,
+                         Sum(stockCnt) as stockCnt,/*재고수량*/
+                         Sum(stockPrice) as stockPrice/*재고금액*/
+                  from adStockDetail 
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+           		   group by productCode
+                ) T3 On T1.productCode = T3.productCode
+      Left Join (
+                  Select productCode,
+                         Sum(productPrice) as totlProdPrice,/*총 입고단가*/
+                         round(Sum(productPrice)/(Select Sum(I1.cnt) as avgCnt 
+                                                    From( 
+                                                         Select  count(*) as cnt 
+                                                            From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                                            <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 										And groupId=#{con_groupId}
+           		       				   						</if>
+                                                            group by  I.stockDate,I.groupId ) As I1)) as  avgProdPrice/*평균입고단가*/,
+                         (Select Sum(I1.cnt) as avgCnt 
+                            From( 
+                                 Select  count(*) as cnt 
+                                    From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                       <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 					And groupId=#{con_groupId}
+           		       				   </if>
+                                    group by  I.stockDate,I.groupId ) As I1) As avgCnt/*평균카운터*/
+                  from adStockDetail                       
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                       <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		       </if>
+                  group by productCode
+                ) T6 On T1.productCode = T6.productCode 
+      Where T1.deletedYn = 'N'
+      group by T1.productCode
+      ) as T4
+      Where 1=1
+            <if test="start_gmroi != null and start_gmroi != '' and end_gmroi != null and end_gmroi != '' " >
+          			And T4.gmroiRate between ${start_gmroi} and ${end_gmroi}
+           	</if>
+           	<if test="start_gmroi != null and start_gmroi != '' and end_gmroi == '' " >
+          			And T4.gmroiRate <![CDATA[>=]]> ${start_gmroi} 
+           	</if>
+           	<if test="start_gmroi == '' and end_gmroi != null and end_gmroi != '' " >
+          			And T4.gmroiRate <![CDATA[<=]]> ${end_gmroi}
+           	</if>
+            <if test="con_group1Name != null and con_group1Name != '' " >
+          			And T4.group1Name LIKE CONCAT('%', #{con_group1Name}, '%')
+           	</if>
+            <if test="con_group2Name != null and con_group2Name != '' " >
+          			And T4.group2Name LIKE CONCAT('%', #{con_group2Name}, '%')
+           	</if>
+           	<if test="con_group3Name != null and con_group3Name != '' " >
+          			And T4.group3Name LIKE CONCAT('%', #{con_group3Name}, '%')
+           	</if>
+            <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           			AND T4.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           			AND T4.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if> 
+      group by T4.productCode   
+      <if test="orderByName != null and orderByName != ''" >
+         Order By ${orderByName} ${orderBySort}
+      </if>    
+ LIMIT ${page_limit_val1} , ${page_limit_val2}
+</select>
+
+<select id="getGmroiCnt" resultType="int">
+SELECT count(*) AS TOT_COUNT
+ FROM (
+       Select T4.productCode,
+       T4.productName,
+       T4.group1Name,
+       T4.group2Name,
+       T4.group3Name,
+       ifnull(truncate(T4.stockCnt/T4.avgCnt,2),0) as avgStockCnt,/*평균재고수량*/
+       ifnull(round(T4.stockPrice/T4.avgCnt),0) as avgStockAmt,/*평균재고금액*/          
+       ifnull(T4.totalSaleCnt,0) as totalSaleCnt,/*총매출수량*/
+       ifnull(T4.totalSaleAmt,0) as totalSaleAmt,/*총매출금액*/
+       ifnull((T4.totalSaleAmt-T4.salePriceAmt),0) as profitSaleAmt,/*총 이익금액*/
+       ifnull((floor((ifnull((T4.totalSaleAmt-T4.salePriceAmt),0)/ifnull(T4.totalSaleAmt,0))*10000)*0.01),0) as avgSaleRate,
+       ifnull((floor((ifnull(T4.totalSaleAmt,0)/floor(ifnull(round(T4.stockPrice/T4.avgCnt),0)))*100)*0.01),0) as stockCycleRate,
+       ifnull((round(( ifnull((T4.totalSaleAmt-T4.salePriceAmt),0)/floor(round(T4.stockPrice/T4.avgCnt)))*10000)*0.01),0) as gmroiRate   
+From (       
+      Select T1.productCode,
+             T1.productName,
+             T1.group1Name,
+             T1.group2Name,
+             T1.group3Name,
+             T6.avgProdPrice, /*평균원가금액*/ 
+             T6.avgCnt, /*평균카운트*/
+             T3.stockCnt,/*총재고수량*/
+             T3.stockPrice,/*총재고금액*/
+             T2.salesCnt as totalSaleCnt,/*총매출수량*/
+             T2.salesPrice as totalSaleAmt,/*총매출금액*/ 
+             (T6.avgProdPrice*T2.salesCnt)as salePriceAmt/*총판매원가금액*/
+      from adProductMaster T1
+      Left Join (
+                  Select productCode,
+                         Sum(salesCnt) as salesCnt,/*매출수량*/
+                         Sum(salesPrice) as salesPrice/*매출금액*/
+                  from adSalesDetail 
+                  Where salesDate between date_add(#{start_saleDate}, interval 1 day)  And date_add(#{end_saleDate}, interval 1 day) 
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+                  group by productCode
+                  ) T2 On T1.productCode=T2.productCode        
+      Left Join (
+                  Select productCode,
+                         Sum(stockCnt) as stockCnt,/*재고수량*/
+                         Sum(stockPrice) as stockPrice/*재고금액*/
+                  from adStockDetail 
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+           		   group by productCode
+                ) T3 On T1.productCode = T3.productCode
+      Left Join (
+                  Select productCode,
+                         Sum(productPrice) as totlProdPrice,/*총 입고단가*/
+                         round(Sum(productPrice)/(Select Sum(I1.cnt) as avgCnt 
+                                                    From( 
+                                                         Select  count(*) as cnt 
+                                                            From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                                            <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 										And groupId=#{con_groupId}
+           		       				   						</if>
+                                                            group by  I.stockDate,I.groupId ) As I1)) as  avgProdPrice/*평균입고단가*/,
+                         (Select Sum(I1.cnt) as avgCnt 
+                            From( 
+                                 Select  count(*) as cnt 
+                                    From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                       <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 					And groupId=#{con_groupId}
+           		       				   </if>
+                                    group by  I.stockDate,I.groupId ) As I1) As avgCnt/*평균카운터*/
+                  from adStockDetail                       
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                       <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		       </if>
+                  group by productCode
+                ) T6 On T1.productCode = T6.productCode 
+      Where T1.deletedYn = 'N'
+      group by T1.productCode
+      ) as T4
+      Where 1=1
+            <if test="start_gmroi != null and start_gmroi != '' and end_gmroi != null and end_gmroi != '' " >
+          			And T4.gmroiRate between ${start_gmroi} and ${end_gmroi}
+           	</if>
+           	<if test="start_gmroi != null and start_gmroi != '' and end_gmroi == '' " >
+          			And T4.gmroiRate <![CDATA[>=]]> ${start_gmroi} 
+           	</if>
+           	<if test="start_gmroi == '' and end_gmroi != null and end_gmroi != '' " >
+          			And T4.gmroiRate <![CDATA[<=]]> ${end_gmroi}
+           	</if>
+            <if test="con_group1Name != null and con_group1Name != '' " >
+          			And T4.group1Name LIKE CONCAT('%', #{con_group1Name}, '%')
+           	</if>
+            <if test="con_group2Name != null and con_group2Name != '' " >
+          			And T4.group2Name LIKE CONCAT('%', #{con_group2Name}, '%')
+           	</if>
+           	<if test="con_group3Name != null and con_group3Name != '' " >
+          			And T4.group3Name LIKE CONCAT('%', #{con_group3Name}, '%')
+           	</if>
+            <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           			AND T4.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           			AND T4.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if> 
+      group by T4.productCode   
+      <if test="orderByName != null and orderByName != ''" >
+         Order By ${orderByName} ${orderBySort}
+      </if>
+) as TOT
+</select>
+
+<select id="getGmroiTotalCnt" resultMap="gmroiVO" parameterType="com.offact.addys.vo.analysis.GmroiVO" >
+Select ifnull(truncate(Sum(T4.stockCnt)/T4.avgCnt,2),0) as avgStockCnt,/*평균재고수량*/
+       ifnull(round(Sum(T4.stockPrice)/T4.avgCnt),0) as avgStockAmt,/*평균재고금액*/          
+       ifnull(Sum(T4.totalSaleCnt),0) as totalSaleCnt,/*총매출수량*/
+       ifnull(Sum(T4.totalSaleAmt),0) as totalSaleAmt,/*총매출금액*/
+       ifnull((Sum(T4.totalSaleAmt)-Sum(T4.salePriceAmt)),0) as profitSaleAmt,/*총 이익금액*/
+       ifnull((floor((ifnull((Sum(T4.totalSaleAmt)-Sum(T4.salePriceAmt)),0)/ifnull(Sum(T4.totalSaleAmt),0))*10000)*0.01),0) as avgSaleRate,
+       ifnull((floor((ifnull(Sum(T4.totalSaleAmt),0)/floor(ifnull(round(Sum(T4.stockPrice)/T4.avgCnt),0)))*100)*0.01),0) as stockCycleRate,
+       ifnull((round(( ifnull((Sum(T4.totalSaleAmt)-Sum(T4.salePriceAmt)),0)/floor(round(Sum(T4.stockPrice)/T4.avgCnt)))*10000)*0.01),0) as gmroiRate 
+From (       
+      Select T6.avgProdPrice, /*평균원가금액*/ 
+             T6.avgCnt, /*평균카운트*/
+             T3.stockCnt,/*총재고수량*/
+             T3.stockPrice,/*총재고금액*/
+             T2.salesCnt as totalSaleCnt,/*총매출수량*/
+             T2.salesPrice as totalSaleAmt,/*총매출금액*/ 
+             (T6.avgProdPrice*T2.salesCnt)as salePriceAmt/*총판매원가금액*/
+      from adProductMaster T1
+      Left Join (
+                  Select productCode,
+                         Sum(salesCnt) as salesCnt,/*매출수량*/
+                         Sum(salesPrice) as salesPrice/*매출금액*/
+                  from adSalesDetail 
+                   Where salesDate between date_add(#{start_saleDate}, interval 1 day)  And date_add(#{end_saleDate}, interval 1 day) 
+                   <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+                  group by productCode
+                  ) T2 On T1.productCode=T2.productCode  
+      Left Join (
+                  Select productCode,
+                         Sum(stockCnt) as stockCnt,/*재고수량*/
+                         Sum(stockPrice) as stockPrice/*재고금액*/
+                  from adStockDetail 
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+                  group by productCode
+                ) T3 On T1.productCode = T3.productCode
+      Left Join (
+                  Select productCode,
+                         Sum(productPrice) as totlProdPrice,/*총 입고단가*/
+                         round(Sum(productPrice)/(Select Sum(I1.cnt) as avgCnt 
+                                                    From( 
+                                                         Select  count(*) as cnt 
+                                                            From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                                             <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 										And I.groupId=#{con_groupId}
+           		  											</if> 
+                                                            group by  I.stockDate,I.groupId ) As I1)) as  avgProdPrice/*평균입고단가*/,
+                         (Select Sum(I1.cnt) as avgCnt 
+                            From( 
+                                 Select  count(*) as cnt 
+                                    From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                    <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 				And I.groupId=#{con_groupId}
+           		  					</if>
+                                    group by  I.stockDate,I.groupId ) As I1) As avgCnt/*평균카운터*/
+                  from adStockDetail                       
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>      
+                  group by productCode
+                ) T6 On T1.productCode = T6.productCode 
+       Where T1.deletedYn = 'N'
+     		<if test="start_gmroi != null and start_gmroi != '' and end_gmroi != null and end_gmroi != '' " >
+          			And T1.gmroiRate between ${start_gmroi} and ${end_gmroi}
+           	</if>
+           	<if test="start_gmroi != null and start_gmroi != '' and end_gmroi == '' " >
+          			And T1.gmroiRate <![CDATA[>=]]> ${start_gmroi} 
+           	</if>
+           	<if test="start_gmroi == '' and end_gmroi != null and end_gmroi != '' " >
+          			And T1.gmroiRate <![CDATA[<=]]> ${end_gmroi}
+           	</if> 
+           	<if test="con_group1Name != null and con_group1Name != '' " >
+          			And T1.group1Name LIKE CONCAT('%', #{con_group1Name}, '%')
+           	</if>
+            <if test="con_group2Name != null and con_group2Name != '' " >
+          			And T1.group2Name LIKE CONCAT('%', #{con_group2Name}, '%')
+           	</if>
+           	<if test="con_group3Name != null and con_group3Name != '' " >
+          			And T1.group3Name LIKE CONCAT('%', #{con_group3Name}, '%')
+           	</if>
+            <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           			AND T1.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           			AND T1.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if> 		 
+      ) as T4
+
+     
+</select>
+
+<select id="getGmroiList"  resultMap="gmroiVO" parameterType="com.offact.addys.vo.analysis.GmroiVO" >
+Select T4.productCode,
+       T4.productName,
+       T4.group1Name,
+       T4.group2Name,
+       T4.group3Name,
+       ifnull(truncate(T4.stockCnt/T4.avgCnt,2),0) as avgStockCnt,/*평균재고수량*/
+       ifnull(round(T4.stockPrice/T4.avgCnt),0) as avgStockAmt,/*평균재고금액*/          
+       ifnull(T4.totalSaleCnt,0) as totalSaleCnt,/*총매출수량*/
+       ifnull(T4.totalSaleAmt,0) as totalSaleAmt,/*총매출금액*/
+       ifnull((T4.totalSaleAmt-T4.salePriceAmt),0) as profitSaleAmt,/*총 이익금액*/
+       ifnull((floor((ifnull((T4.totalSaleAmt-T4.salePriceAmt),0)/ifnull(T4.totalSaleAmt,0))*10000)*0.01),0) as avgSaleRate,
+       ifnull((floor((ifnull(T4.totalSaleAmt,0)/floor(ifnull(round(T4.stockPrice/T4.avgCnt),0)))*100)*0.01),0) as stockCycleRate,
+       ifnull((round(( ifnull((T4.totalSaleAmt-T4.salePriceAmt),0)/floor(round(T4.stockPrice/T4.avgCnt)))*10000)*0.01),0) as gmroiRate    
+From (       
+      Select T1.productCode,
+             T1.productName,
+             T1.group1Name,
+             T1.group2Name,
+             T1.group3Name,
+             T6.avgProdPrice, /*평균원가금액*/ 
+             T6.avgCnt, /*평균카운트*/
+             Sum(T3.stockCnt) as stockCnt ,/*총재고수량*/
+             Sum(T3.stockPrice) as stockPrice ,/*총재고금액*/
+             T2.salesCnt as totalSaleCnt,/*총매출수량*/
+             T2.salesPrice as totalSaleAmt,/*총매출금액*/ 
+             (T6.avgProdPrice*T2.salesCnt)as salePriceAmt/*총판매원가금액*/
+      from adProductMaster T1
+      Left Join (
+                  Select productCode,
+                         Sum(salesCnt) as salesCnt,/*매출수량*/
+                         Sum(salesPrice) as salesPrice/*매출금액*/
+                  from adSalesDetail 
+                  Where salesDate between date_add(#{start_saleDate}, interval 1 day)  And date_add(#{end_saleDate}, interval 1 day) 
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+                  group by productCode ,groupId
+                  ) T2 On T1.productCode=T2.productCode        
+      Left Join (
+                  Select productCode,
+                         stockCnt,/*재고수량*/
+                         stockPrice/*재고금액*/
+                  from adStockDetail 
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                  <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		  </if>
+                ) T3 On T1.productCode = T3.productCode
+      Left Join (
+                  Select productCode,
+                         Sum(productPrice) as totlProdPrice,/*총 입고단가*/
+                         round(Sum(productPrice)/(Select Sum(I1.cnt) as avgCnt 
+                                                    From( 
+                                                         Select  count(*) as cnt 
+                                                            From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                                            <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 										And groupId=#{con_groupId}
+           		       				   						</if>
+                                                            group by  I.stockDate,I.groupId ) As I1)) as  avgProdPrice/*평균입고단가*/,
+                         (Select Sum(I1.cnt) as avgCnt 
+                            From( 
+                                 Select  count(*) as cnt 
+                                    From adStock I Where I.stockDate between #{start_saleDate} And #{end_saleDate}
+                                       <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 					And groupId=#{con_groupId}
+           		       				   </if>
+                                    group by  I.stockDate,I.groupId ) As I1) As avgCnt/*평균카운터*/
+                  from adStockDetail                       
+                  Where stockDate between #{start_saleDate} And #{end_saleDate}
+                       <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+          				 And groupId=#{con_groupId}
+           		       </if>
+                  group by productCode
+                ) T6 On T1.productCode = T6.productCode 
+      Where T1.deletedYn = 'N'          
+      group by T1.productCode
+      ) as T4
+      Where 1=1
+            <if test="start_gmroi != null and start_gmroi != '' and end_gmroi != null and end_gmroi != '' " >
+          			And T4.gmroiRate between ${start_gmroi} and ${end_gmroi}
+           	</if>
+           	<if test="start_gmroi != null and start_gmroi != '' and end_gmroi == '' " >
+          			And T4.gmroiRate <![CDATA[>=]]> ${start_gmroi} 
+           	</if>
+           	<if test="start_gmroi == '' and end_gmroi != null and end_gmroi != '' " >
+          			And T4.gmroiRate <![CDATA[<=]]> ${end_gmroi}
+           	</if>
+            <if test="con_group1Name != null and con_group1Name != '' " >
+          			And T4.group1Name LIKE CONCAT('%', #{con_group1Name}, '%')
+           	</if>
+            <if test="con_group2Name != null and con_group2Name != '' " >
+          			And T4.group2Name LIKE CONCAT('%', #{con_group2Name}, '%')
+           	</if>
+           	<if test="con_group3Name != null and con_group3Name != '' " >
+          			And T4.group3Name LIKE CONCAT('%', #{con_group3Name}, '%')
+           	</if>
+            <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           			AND T4.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           			AND T4.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if> 
+      group by T4.productCode   
+</select>
+</mapper>

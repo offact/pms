@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="As">
+
+<resultMap id="asListVO" type="com.offact.addys.vo.smart.AsVO" >
+  <result column="asNo"              property="asNo"  />
+  <result column="groupId"            property="groupId"  />
+  <result column="groupName"            property="groupName"  />
+  <result column="customerKey"      	   property="customerKey"  />
+  <result column="customerName"       	   property="customerName"  />
+  <result column="productCode"              property="productCode"  />
+  <result column="productName"              property="productName"  />
+  <result column="group1Id"            property="group1Id"  />
+  <result column="group1Name"            property="group1Name"  />
+  <result column="asCategory"                property="asCategory"  />
+  <result column="asCode"   property="asCode"  />
+  <result column="asDetail"   property="asDetail"  />
+  <result column="asImage"   property="asImage"  />
+  <result column="asState"   property="asState"  />
+  <result column="asStartUserId"   property="asStartUserId"  />
+  <result column="asStartDateTime"   property="asStartDateTime"  />
+  <result column="asRequestUserId"   property="asRequestUserId"  />
+  <result column="asRequestDateTime"   property="asRequestDateTime"  />
+  <result column="asResponseUserId"   property="asResponseUserId"  />
+  <result column="asResponseDateTime"   property="asResponseDateTime"  />
+  <result column="asCompleteUserId"   property="asCompleteUserId"  />
+  <result column="asCompleteDateTime"   property="asCompleteDateTime"  />
+  <result column="asTargetDate"   property="asTargetDate"  />
+  <result column="asResult"   property="asResult"  />
+  <result column="receiveName"   property="receiveName"  />
+  <result column="receiveTelNo"   property="receiveTelNo"  />
+  <result column="receiveType"   property="receiveType"  />
+  <result column="receiveAddress"   property="receiveAddress"  />
+  <result column="receiveAddressDetail"   property="receiveAddressDetail"  />
+  <result column="receivePost"   property="receivePost"  />
+  <result column="customerRequest"   property="customerRequest"  />
+  <result column="purchaseDate"   property="purchaseDate"  />
+  <result column="receiptImage"   property="receiptImage"  />
+  <result column="memo"   property="memo"  />
+  <result column="asDeliveryMethod"   property="asDeliveryMethod"  />
+  <result column="reDeliveryMethod"   property="reDeliveryMethod"  />
+  <result column="asTransportCode"   property="asTransportCode"  />
+  <result column="reTransportCode"   property="reTransportCode"  />
+  <result column="asTransport"   property="asTransport"  />
+  <result column="reTransport"   property="reTransport"  />
+  <result column="asTransportNo"   property="asTransportNo"  />
+  <result column="reTransportNo"   property="reTransportNo"  />
+  <result column="asQuickCharge"   property="asQuickCharge"  />
+  <result column="reQuickCharge"   property="reQuickCharge"  />
+  <result column="asQuickTel"   property="asQuickTel"  />
+  <result column="reQuickTel"   property="reQuickTel"  />
+  <result column="asTransurl"      property="asTransurl"  /> 
+  <result column="reTransurl"      property="reTransurl"  /> 
+  <result column="asPolicyProduct"      property="asPolicyProduct"  /> 
+  
+</resultMap>
+
+<select id="getAsPageList"  resultMap="asListVO" parameterType="com.offact.addys.vo.smart.AsVO" >
+        SELECT T1.asNo
+			  ,T1.groupId
+			  ,T2.groupName
+			  ,T1.customerKey
+			  ,T1.customerName 
+			  ,T1.productCode
+			  ,T4.productName
+			  ,T4.group1
+			  ,T4.group1Name
+			  ,T1.asCategory
+			  ,T1.asCode
+			  ,T1.asDetail
+			  ,T1.asImage
+			  ,T5.codeName as asState
+			  ,T6.codeName as asSubState
+			  ,DATE_FORMAT(T1.asStartDateTime, '%Y-%m-%d') as asStartDateTime
+			  ,Case When ifnull(T1.asTargetDate,'') = '' Then '' Else DATE_FORMAT(T1.asTargetDate, '%Y-%m-%d') End asTargetDate
+			  ,DATE_FORMAT(T1.asCompleteDateTime, '%Y-%m-%d') as asCompleteDateTime
+			  ,ifnull(T1.asStartUserId,'') as asStartUserId
+			  ,ifnull(T3.userName,'') as asStartUserName
+          FROM smAs T1
+          	   Left Join ofGroup T2 On T1.groupId=T2.groupId
+			   Left Join ofUser T3 On T1.asStartUserId=T3.userId
+			   Left Join adProductMaster T4 On T1.productCode=T4.productCode
+			   Left Join ofCode T5 On T1.asState=T5.codeId And T5.codeGroupId='AS01'
+			   Left Join ofCode T6 On T1.asSubState=T6.codeId And T6.codeGroupId='AS02'
+         WHERE T1.asStartDateTime between concat(#{start_asDate},' 00:00:00') and concat(#{end_asDate},' 23:59:59')
+           <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           		AND T1.groupId = #{con_groupId}
+           </if>
+           <if test="searchState != null and searchState != ''" >
+           		AND T1.asState = #{searchState}
+           </if>
+           <if test="searchSubState != null and searchSubState != ''" >
+           		AND T1.asSubState = #{searchSubState}
+           </if>
+           <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           AND T1.customerKey  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           AND T1.customerName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if>
+         ORDER BY asStartDateTime desc  ,asNo desc
+ LIMIT ${page_limit_val1} , ${page_limit_val2}
+</select>
+
+<select id="getAsCnt" resultType="int">
+	SELECT count(*) AS TOT_COUNT
+  		FROM smAs T1
+          	   Left Join ofGroup T2 On T1.groupId=T2.groupId
+			   Left Join ofUser T3 On T1.asStartUserId=T3.userId
+			   Left Join adProductMaster T4 On T1.productCode=T4.productCode
+			   Left Join ofCode T5 On T1.asState=T5.codeId And T5.codeGroupId='AS01'
+			   Left Join ofCode T6 On T1.asSubState=T6.codeId And T6.codeGroupId='AS02'
+         WHERE T1.asStartDateTime between concat(#{start_asDate},' 00:00:00') and concat(#{end_asDate},' 23:59:59')
+         	<if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           		AND T1.groupId = #{con_groupId}
+           </if>
+           <if test="searchState != null and searchState != ''" >
+           		AND T1.asState = #{searchState}
+           </if>
+           <if test="searchSubState != null and searchSubState != ''" >
+           		AND T1.asSubState = #{searchSubState}
+           </if>
+           <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           AND T1.customerKey  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           AND T1.customerName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if>
+</select>
+
+<select id="getAsDetail" resultMap="asListVO" parameterType="com.offact.addys.vo.smart.AsVO" >
+
+		SELECT T1.asNo
+		      ,T1.groupId
+			  ,T2.groupName
+			  ,T1.customerKey
+			  ,T1.customerName 
+			  ,T1.productCode
+			  ,T5.productName
+			  ,T5.group1
+			  ,T6.brandName as group1Name
+			  ,replace(T6.asPolicy,replace('<![CDATA[\n]]>',' ',''),  replace('<![CDATA[<br>]]>',' ','')) as asPolicy
+			  ,replace(T10.asPolicy,replace('<![CDATA[\n]]>',' ',''),  replace('<![CDATA[<br>]]>',' ','')) as asPolicyProduct
+			  ,T1.asCategory
+			  ,T1.asCode
+			  ,replace(T1.asDetail,replace('<![CDATA[\n]]>',' ',''),  replace('<![CDATA[<br>]]>',' ','')) as asDetail
+			  ,T1.asImage
+			  ,T1.asState
+			  ,T1.asSubState
+			  ,T7.codeName as asStateTrans
+			  ,DATE_FORMAT(T1.asStartDateTime, '%Y-%m-%d') as asStartDateTime
+			  ,DATE_FORMAT(T1.asCompleteDateTime, '%Y-%m-%d') as asCompleteDateTime
+			  ,Case When ifnull(T1.asTargetDate,'') = '' Then '' Else DATE_FORMAT(T1.asTargetDate, '%Y-%m-%d') End asTargetDate
+			  ,ifnull(T1.asStartUserId,'') as asStartUserId
+			  ,ifnull(T3.userName,'') as asStartUserName
+			  ,ifnull(T1.asCompleteUserId,'') as asCompleteUserId
+			  ,ifnull(T4.userName,'') as asCompleteUserName
+			  ,ifnull(T1.asResult,'') as asResult
+			  ,ifnull(T1.asResultDateTime,'') as asResultDateTime
+			  ,T1.receiveName
+			  ,T1.receiveTelNo
+			  ,ifnull(T1.receiveType,'01') as receiveType
+			  ,T1.receiveAddress
+			  ,T1.receiveAddressDetail
+			  ,T1.receivePost
+			  ,replace(T1.customerRequest,replace('<![CDATA[\n]]>',' ',''),  replace('<![CDATA[<br>]]>',' ','')) as customerRequest
+			  ,Case When ifnull(T1.purchaseDate,'') = '' Then '' Else DATE_FORMAT(T1.purchaseDate, '%Y-%m-%d') End purchaseDate
+			  ,T1.receiptImage
+			  ,replace(T1.memo,replace('<![CDATA[\n]]>',' ',''),  replace('<![CDATA[<br>]]>',' ','')) as memo
+			  ,T1.asDeliveryMethod
+			  ,T1.reDeliveryMethod
+			  ,T1.asTransportCode
+			  ,T1.reTransportCode
+			  ,T1.asTransport
+			  ,T1.reTransport
+			  ,T1.asTransportNo
+			  ,T1.reTransportNo
+			  ,T1.asQuickCharge
+			  ,T1.reQuickCharge
+			  ,T1.asQuickTel
+			  ,T1.reQuickTel
+			  ,T8.description as asTransurl
+			  ,T9.description as reTransurl
+          FROM smAs T1
+			   Left Join ofGroup T2 On T1.groupId=T2.groupId
+			   Left Join ofUser T3 On T1.asStartUserId=T3.userId
+			   Left Join ofUser T4 On T1.asCompleteUserId=T4.userId
+			   Left Join adProductMaster T5 On T1.productCode=T5.productCode 
+			   Left Join smBrand T6 On T5.group1=T6.brandCode 
+			   Left Join ofCode T7 On T1.asState=T7.codeId And T7.codeGroupId='AS01'  
+			   Left Join ofCode T8 On T1.asTransportCode = T8.codeId and T8.codegroupId = 'DE01'
+			   Left Join ofCode T9 On T1.reTransportCode = T9.codeId and T9.codegroupId = 'DE01'
+			   Left Join smProduct T10 On T1.productCode=T10.productCode 
+		 Where T1.asNo = #{asNo}
+		 
+</select>
+
+<update id="asStateUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set asState = #{asState}
+ 		Where asNo = #{asNo}
+</update>
+
+<insert id="asResultInsert" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	Insert into smAs( 
+        	 asNo
+        	,asState
+        	,productCode
+        	,customerKey
+            ,asStartUserId
+            ,asCompleteUserId
+            ,groupId
+            ,asResult 
+            ,asStartDateTime
+            ,asResultDateTime
+            )
+        Values (
+              #{asNo}
+            , #{asState}
+            , #{productCode}
+            , #{customerKey}
+	  		, #{asStartUserId}
+	  		, #{asCompleteUserId}
+	  		, #{groupId}
+	  		, #{asResult}
+	  		, now()
+	  		, now()
+	  		)
+	  		
+</insert>
+
+<insert id="asResultUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	 Update smAs
+       		Set 
+  				customerName = #{customerName}
+  				,receiveName = #{receiveName}
+  				,receiveTelNo = #{receiveTelNo}
+  				,receiveType = #{receiveType}
+  				,receiveAddress = #{receiveAddress}
+  				,receiveAddressDetail = #{receiveAddressDetail}
+  				,asDetail = #{asDetail}
+  				,customerRequest = #{customerRequest}
+  				,purchaseDate = #{purchaseDate}
+  				,asTargetDate = #{asTargetDate}
+  				,memo = #{memo}
+ 		Where asNo = #{asNo}
+	  		
+</insert>
+
+<insert id="asImageUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	 Update smAs
+       		Set 
+  				asImage = #{asImage}
+ 		Where asNo = #{asNo}
+	  		
+</insert>
+
+<insert id="receiptImageUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	 Update smAs
+       		Set 
+  				receiptImage = #{receiptImage}
+ 		Where asNo = #{asNo}
+	  		
+</insert>
+
+<insert id="asReplaceInsert" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	Insert into smAs( 
+        	 asNo
+        	,asState
+        	,productCode
+        	,customerKey
+        	,customerName
+            ,asStartUserId
+            ,asCompleteUserId
+            ,groupId
+            ,asTargetDate
+            ,asResult 
+            ,asStartDateTime
+            ,asCompleteDateTime
+            ,asResultDateTime
+            ,asDetail
+            ,asImage
+            ,receiveName
+            ,receiveTelNo
+            ,receiveType
+            ,receiveAddress
+            ,receiveAddressDetail
+            ,receivePost
+            ,customerRequest
+            ,purchaseDate
+            ,receiptImage
+            ,memo
+            )
+        Values (
+              #{asNo}
+            , #{asState}
+            , #{productCode}
+            , #{customerKey}
+            , #{customerName}
+	  		, #{asStartUserId}
+	  		, #{asCompleteUserId}
+	  		, #{groupId}
+	  		, #{asTargetDate}
+	  		, #{asResult}
+	  		, now()
+	  		, now()
+	  		, now()
+	  		, #{asDetail}
+	  		, #{asImage}
+	  		, #{receiveName}
+	  		, #{receiveTelNo}
+	  		, #{receiveType}
+	  		, #{receiveAddress}
+	  		, #{receiveAddressDetail}
+	  		, #{receivePost}
+	  		, #{customerRequest}
+	  		, #{purchaseDate}
+	  		, #{receiptImage}
+	  		, #{memo}
+	  		)
+	  		
+</insert>
+
+<update id="asTransUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set 
+  				asState = #{asState}
+  				,asSubState = #{asSubState}
+  				,asDeliveryMethod = #{asDeliveryMethod}
+  				,asTransportCode = #{asTransportCode}
+  				,asTransport = #{asTransport}
+  				,asTransportNo = #{asTransportNo}
+  				,asQuickCharge = #{asQuickCharge}
+  				,asQuickTel = #{asQuickTel}
+ 		Where asNo = #{asNo}
+</update>
+
+<update id="asStateProc" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set
+       		   asState =#{asState} 
+  			   ,asSubState =#{asSubState}
+ 		Where asNo = #{asNo}
+</update>
+
+<update id="asStateProcComplete" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set
+       		   asState =#{asState} 
+  			   ,asSubState =#{asSubState}
+  			   ,asCompleteDateTime = now()
+ 		Where asNo = #{asNo}
+</update>
+
+<update id="asCenterStart" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set
+       		   asState =#{asState} 
+  			   ,asSubState =#{asSubState}
+ 		Where asNo = #{asNo}
+</update>
+
+<update id="asReceiveProc" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set 
+  				asState =#{asState} 
+  			    ,asSubState =#{asSubState}
+  				,reDeliveryMethod = #{reDeliveryMethod}
+  				,reTransportCode = #{reTransportCode}
+  				,reTransport = #{reTransport}
+  				,reTransportNo = #{reTransportNo}
+  				,reQuickCharge = #{reQuickCharge}
+  				,reQuickTel = #{reQuickTel}
+ 		Where asNo = #{asNo}
+</update>
+
+<update id="asReceiveProcComplete" parameterType="com.offact.addys.vo.smart.AsVO" >
+        Update smAs
+       		Set 
+  				asState =#{asState} 
+  			    ,asSubState =#{asSubState}
+  				,reDeliveryMethod = #{reDeliveryMethod}
+  				,reTransportCode = #{reTransportCode}
+  				,reTransport = #{reTransport}
+  				,reTransportNo = #{reTransportNo}
+  				,reQuickCharge = #{reQuickCharge}
+  				,reQuickTel = #{reQuickTel}
+  				,asCompleteDateTime = now()
+ 		Where asNo = #{asNo}
+</update>
+
+
+<insert id="asTransHistoryInsert" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	  	Insert into smAsHistory( 
+        	 asNo
+        	,userId
+        	,groupId
+        	,asState
+        	,asSubState
+        	,asHistory
+            ,asHistoryDateTime
+            )
+        Values (
+              #{asNo}
+            , #{userId}
+            , #{groupId}
+            , #{asState}
+            , #{asSubState}
+            , #{asHistory}
+            , now()
+	  		)
+	  		
+</insert>
+
+
+<insert id="asCenterHistoryInsert" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	  	Insert into smAsHistory( 
+        	 asNo
+        	,userId
+        	,groupId
+        	,asState
+        	,asSubState
+        	,asHistory
+            ,asHistoryDateTime
+            ,centerAsNo
+            ,centerImage
+            )
+        Values (
+              #{asNo}
+            , #{userId}
+            , #{groupId}
+            , #{asState}
+            , #{asSubState}
+            , #{asHistory}
+            , now()
+            , #{centerAsNo}
+            , #{centerImage}
+	  		)
+	  		
+</insert>
+
+<update id="asTransReUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+       Update smAs
+       		Set 
+  				asDeliveryMethod = #{asDeliveryMethod}
+  				,asTransportCode = #{asTransportCode}
+  				,asTransport = #{asTransport}
+  				,asTransportNo = #{asTransportNo}
+  				,asQuickCharge = #{asQuickCharge}
+  				,asQuickTel = #{asQuickTel}
+ 		Where asNo = #{asNo}
+</update>
+
+<update id="reTransReUpdate" parameterType="com.offact.addys.vo.smart.AsVO" >
+       Update smAs
+       		Set 
+  				reDeliveryMethod = #{reDeliveryMethod}
+  				,reTransportCode = #{reTransportCode}
+  				,reTransport = #{reTransport}
+  				,reTransportNo = #{reTransportNo}
+  				,reQuickCharge = #{reQuickCharge}
+  				,reQuickTel = #{reQuickTel}
+ 		Where asNo = #{asNo}
+</update>
+
+<insert id="asRegistInsert" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	  	Insert into smAs( 
+        	 asNo
+        	,asState
+        	,productCode
+        	,customerKey
+        	,customerName
+            ,asStartUserId
+            ,groupId
+            ,asTargetDate
+            ,asResult 
+            ,asStartDateTime
+            ,asDetail
+            ,asImage
+            ,receiveName
+            ,receiveTelNo
+            ,receiveType
+            ,receiveAddress
+            ,receiveAddressDetail
+            ,receivePost
+            ,customerRequest
+            ,purchaseDate
+            ,receiptImage
+            ,memo
+            )
+        Values (
+              #{asNo}
+            , #{asState}
+            , #{productCode}
+            , #{customerKey}
+            , #{customerName}
+	  		, #{asStartUserId}
+	  		, #{groupId}
+	  		, #{asTargetDate}
+	  		, #{asResult}
+	  		, now()
+	  		, #{asDetail}
+	  		, #{asImage}
+	  		, #{receiveName}
+	  		, #{receiveTelNo}
+	  		, #{receiveType}
+	  		, #{receiveAddress}
+	  		, #{receiveAddressDetail}
+	  		, #{receivePost}
+	  		, #{customerRequest}
+	  		, #{purchaseDate}
+	  		, #{receiptImage}
+	  		, #{memo}
+	  		)
+	  		
+</insert>
+
+<select id="getAsReply" resultMap="asListVO" parameterType="com.offact.addys.vo.smart.AsVO" >
+
+		SELECT T1.idx
+		      ,T1.userId
+		      ,T2.userName
+		      ,DATE_FORMAT(T1.asHistoryDateTime, '%Y-%m-%d %T') as asHistoryDateTime
+			  ,T1.asHistory
+          FROM smAsHistory T1
+               Left Join ofUser T2 on T1.userId=T2.userId
+		 Where T1.asNo = #{asNo}
+		 order by asHistoryDateTime desc
+</select>
+
+<insert id="regiReplyInsert" parameterType="com.offact.addys.vo.smart.AsVO" >
+  	
+  	Insert into smAsHistory( 
+        	 userId
+            ,groupId
+            ,asHistory
+            ,asHistoryDateTime
+            ,asNo
+            )
+        Values (
+	  		  #{userId}
+	  		, #{groupId}
+	  		, #{asHistory}
+	  		, now()
+	  		, #{asNo}
+	  		)
+</insert>
+
+<select id="getAsNo"  resultMap="asListVO" parameterType="com.offact.addys.vo.smart.AsVO" >
+
+  Select concat(#{asNo} ,T3.asNo) As asNo
+  From (
+  Select Case When T2.asNoNo <![CDATA[<]]>  10 Then concat('00',T2.asNoNo) 
+              When T2.asNoNo <![CDATA[>=]]>  10 And T2.asNoNo  <![CDATA[<]]>   99  Then concat('0',T2.asNoNo) 
+              Else T2.asNoNo End asNo
+    From(
+          Select (cast(right(T1.asNo,3) As unsigned)+1) As asNoNo 
+            From (
+                  Select ifnull(max(asNo),concat(#{asNo},'000')) As asNo 
+                    From smAs where left(asNo,12)=#{asNo} ) As T1 
+    ) As T2
+  ) As T3
+
+    
+</select>
+
+</mapper>

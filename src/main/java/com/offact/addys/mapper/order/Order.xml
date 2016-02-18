@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Order">
+
+<resultMap id="orderVO" type="com.offact.addys.vo.order.OrderVO" >
+  <result column="orderCode"      property="orderCode"  />
+  <result column="groupId"          property="groupId"  />
+  <result column="groupName"      property="groupName"  />
+  <result column="companyCode"      property="companyCode"  />
+  <result column="companyName"      property="companyName"  />
+  <result column="faxKey"        property="faxKey"  />
+  <result column="smsKey"        property="smsKey"  />
+  <result column="emailKey"        property="emailKey"  />
+  <result column="faxNumber"        property="faxNumber"  />
+  <result column="mobilePhone"        property="mobilePhone"  />
+  <result column="email"        property="email"  />
+  <result column="telNumber"        property="telNumber"  />
+  <result column="orderDate"        property="orderDate"  />
+  <result column="deliveryDate"        property="deliveryDate"  />
+  <result column="deliveryMethod"        property="deliveryMethod"  />
+  <result column="deliveryEtc"        property="deliveryEtc"  />
+  <result column="deliveryCharge"        property="deliveryCharge"  />
+  <result column="orderCharge"        property="orderCharge"  />
+  <result column="orderEtc"        property="orderEtc"  />
+  <result column="orderAddress"        property="orderAddress"  />
+  <result column="orderFaxNumber"        property="orderFaxNumber"  />
+  <result column="orderMobilePhone"        property="orderMobilePhone"  />
+  <result column="orderEmail"        property="orderEmail"  />
+  <result column="orderTelNumber"        property="orderTelNumber"  />
+  <result column="payMethod"        property="payMethod"  />
+  <result column="buyResult"        property="buyResult"  />
+  <result column="buyResultView"        property="buyResultView"  />
+  <result column="orderState"        property="orderState"  />
+  <result column="orderStateView"        property="orderStateView"  />
+  <result column="buyDateTime"        property="buyDateTime"  />
+  <result column="buyUserId"        property="buyUserId"  />
+  <result column="buyUserName"        property="buyUserName"  />
+  <result column="orderDateTime"     property="orderDateTime"  />
+  <result column="orderUserID"          property="orderUserID"  />
+  <result column="orderUserName"           property="orderUserName"  />
+  <result column="deferDateTime"     property="deferDateTime"  />
+  <result column="deferUserId"          property="deferUserId"  />
+  <result column="deferUserName"           property="deferUserName"  />
+  <result column="sms"           property="sms"  />
+  <result column="memo"           property="memo"  />
+  <result column="memoCnt"           property="memoCnt"  />
+  <result column="etc"           property="etc"  />
+  <result column="etcCnt"           property="etcCnt"  />
+  <result column="productCode"        property="productCode"  />
+  <result column="productName"        property="productName"  />
+  <result column="stockDate"        property="stockDate"  />
+  <result column="stockCnt"        property="stockCnt"  />
+  <result column="safeStock"        property="safeStock"  />
+  <result column="holdStock"        property="holdStock"  />
+  <result column="productPrice"        property="productPrice"  />
+  <result column="vatRate"        property="vatRate"  />
+  <result column="vat"        property="vat"  />
+  <result column="orderCnt"        property="orderCnt"  />
+  <result column="orderPrice"        property="orderPrice"  />
+  <result column="orderPriceView"        property="orderPriceView"  />
+  <result column="safeOrderCnt"        property="safeOrderCnt"  />
+  <result column="deferCheck"        property="deferCheck"  />
+  <result column="addCnt"        property="addCnt"  />
+  <result column="lossCnt"        property="lossCnt"  />
+  <result column="orderResultCnt"        property="orderResultCnt"  />
+  <result column="orderResultPrice"        property="orderResultPrice"  />
+  <result column="orderResultPriceView"        property="orderResultPriceView"  />
+  <result column="orderVatRate"        property="orderVatRate"  />
+  <result column="supplyPrice"        property="supplyPrice"  />
+  <result column="totalOrderPrice"        property="totalOrderPrice"  />
+  <result column="barCode"        property="barCode"  />
+  <result column="orderCheck"        property="orderCheck"  />
+  <result column="waitCnt"        property="waitCnt"  />
+  <result column="deferCnt"        property="deferCnt"  />
+  <result column="completeCnt"        property="completeCnt"  />
+  <result column="registCnt"        property="registCnt"  />
+  <result column="deliveryName"        property="deliveryName"  />
+  <result column="orderName"        property="orderName"  />
+  <result column="priceOrder"        property="priceOrder"  />
+  <result column="cntOrder"        property="cntOrder"  />
+  <result column="transDate"        property="transDate"  />
+</resultMap>
+
+<select id="getOrderPageList"  resultMap="orderVO" parameterType="com.offact.addys.vo.order.OrderVO" >
+    
+    Select TEMP.orderStateView,
+           TEMP.orderCode,
+           DATE_FORMAT(TEMP.orderDateTime, '%Y-%m-%d') as orderDateTime,
+           TEMP.orderUserName,
+           TEMP.groupId,
+           TEMP.groupName,
+           TEMP.companyCode,
+           TEMP.companyName,
+           SUM(TEMP.supplyPrice) as supplyPrice,
+           SUM(TEMP.vat) as vat,
+           SUM(TEMP.totalOrderPrice) as totalOrderPrice,
+           DATE_FORMAT(TEMP.buyDateTime, '%Y-%m-%d') as buyDateTime
+           From
+    (
+    Select T5.codeName as orderStateView,
+	       T2.orderCode,
+	       T2.orderDateTime,
+	       T6.userName as orderUserName,
+           T2.groupId,
+           T3.groupName,
+		   T2.companyCode,
+           T4.companyName,
+	   	   (ifnull(T1.orderResultCnt,0)*ifnull(T1.orderResultPrice,0)) as supplyPrice,
+           (ifnull(T1.orderResultCnt,0)*ifnull(T1.orderVatRate,0)) as vat,
+           <!--
+           (ifnull(T1.orderResultCnt,0)*(ifnull(T1.orderResultPrice,0)+ifnull(T1.orderVatRate,0))) as totalOrderPrice
+           -->
+           Case When T2.orderState in ('03','05') Then (ifnull(T1.orderResultCnt,0)*(ifnull(T7.productPrice,0)+ifnull(T7.vatRate,0)))
+           Else (ifnull(T1.orderResultCnt,0)*(ifnull(T1.orderResultPrice,0)+ifnull(T1.orderVatRate,0))) End totalOrderPrice,
+           T2.buyDateTime
+  	From adOrderDetail T1
+      	 Left Join adOrder T2 On T1.orderCode=T2.orderCode
+       	 Left Join ofGroup T3 On T2.groupId =T3.groupId
+       	 Left Join adCompany T4 On T2.companyCode = T4.companyCode
+         Left Join ofCode T5 On T2.orderState = T5.codeId and T5.codeGroupId = 'OD02'
+         Left Join ofUser T6 On T2.orderUserId = T6.userId
+         Left Join adProductMaster T7 On T1.productCode = T7.productCode
+  	Where T2.orderDateTime between concat(#{start_orderDate},' 00:00:00') and concat(#{end_orderDate},' 23:59:59')
+          <if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           		AND T2.groupId = #{con_groupId}
+          </if>
+          <if test="con_orderState != null and con_orderState != '' and con_orderState != '2'" >
+           			AND T2.orderState = #{con_orderState}
+          </if>
+          <if test="searchValue != null and searchValue != ''" >
+             <choose>
+               <when test="searchGubun.equals('01')">
+           			AND T2.orderUserId  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('02')">
+           			AND T6.userName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('03')">
+           			AND T2.companyCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('04')">
+           			AND T4.companyName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('05')">
+           			AND T1.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+               <when test="searchGubun.equals('06')">
+           			AND T7.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+                <when test="searchGubun.equals('07')">
+           			AND T1.orderCode  LIKE CONCAT('%', #{searchValue}, '%')
+               </when>
+             </choose>
+           </if>
+           And T2.orderState not in ( '01','02')
+           And T2.deletedYn='N'
+    ) as TEMP
+    group by TEMP.orderStateView,
+           TEMP.orderCode,
+           TEMP.orderDateTime,
+           TEMP.orderUserName,
+           TEMP.groupId,
+           TEMP.groupName,
+           TEMP.companyCode,
+           TEMP.companyName
+    order by TEMP.orderDateTime desc , TEMP.groupId asc
+	LIMIT ${page_limit_val1} , ${page_limit_val2}
+		
+</select>
+
+<select id="getOrderCnt" resultType="int">
+	SELECT count(*) AS TOT_COUNT
+		From (
+  			   Select T2.orderCode,
+                     count(T1.productCode)
+			   	From adOrderDetail T1
+      				 Left Join adOrder T2 On T1.orderCode=T2.orderCode
+       	 			 Left Join ofGroup T3 On T2.groupId =T3.groupId
+       	 			 Left Join adCompany T4 On T2.companyCode = T4.companyCode
+         			 Left Join ofCode T5 On T2.orderState = T5.codeId and T5.codeGroupId = 'OD02'
+         			 Left Join ofUser T6 On T2.orderUserId = T6.userId
+         			 Left Join adProductMaster T7 On T1.productCode = T7.productCode
+  				Where T2.orderDateTime between concat(#{start_orderDate},' 00:00:00') and concat(#{end_orderDate},' 23:59:59')
+          		<if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           			AND T2.groupId = #{con_groupId}
+          		</if>
+          		<if test="con_orderState != null and con_orderState != '' and con_orderState != '2'" >
+           			AND T2.orderState = #{con_orderState}
+          		</if>
+         	 	<if test="searchValue != null and searchValue != ''" >
+             	<choose>
+               		<when test="searchGubun.equals('01')">
+           				AND T2.orderUserId  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+               		<when test="searchGubun.equals('02')">
+           				AND T6.userName  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+               		<when test="searchGubun.equals('03')">
+           				AND T2.companyCode  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+               		<when test="searchGubun.equals('04')">
+           				AND T4.companyName  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+               		<when test="searchGubun.equals('05')">
+           				AND T1.productCode  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+               		<when test="searchGubun.equals('06')">
+           				AND T7.productName  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+               		<when test="searchGubun.equals('07')">
+           				AND T1.orderCode  LIKE CONCAT('%', #{searchValue}, '%')
+               		</when>
+             	</choose>
+           		</if>
+                And T2.orderState not in ( '01','02')
+                And T2.deletedYn='N'
+                group by T2.orderCode
+		) As TOT
+        
+</select>
+
+<select id="getStateCnt"  resultMap="orderVO" >
+
+SELECT sum(TOT.waitCnt) AS waitCnt,
+       sum(TOT.deferCnt) AS deferCnt,
+       sum(TOT.completeCnt) AS completeCnt,
+       sum(TOT.registCnt) AS registCnt
+		From (
+			  Select T2.orderCode,
+                  Case When T2.orderState = '03' Then 1 Else 0 End waitCnt,
+                  Case When T2.orderState = '04' Then 1 Else 0 End deferCnt,
+                  Case When T2.orderState = '06' Then 1 Else 0 End completeCnt,
+                  Case When T2.orderState = '07' Then 1 Else 0 End registCnt,
+                  T2.orderState
+			   	From adOrderDetail T1
+      				 Left Join adOrder T2 On T1.orderCode=T2.orderCode
+       	 			 Left Join ofGroup T3 On T2.groupId =T3.groupId
+       	 			 Left Join adCompany T4 On T2.companyCode = T4.companyCode
+         			 Left Join ofCode T5 On T2.orderState = T5.codeId and T5.codeGroupId = 'OD02'
+         			 Left Join ofUser T6 On T2.orderUserId = T6.userId
+         			 Left Join adProductMaster T7 On T1.productCode = T7.productCode
+  				Where T2.orderDateTime between concat(#{start_orderDate},' 00:00:00') and concat(#{end_orderDate},' 23:59:59')
+          		<if test="con_groupId != null and con_groupId != '' and con_groupId != 'G00000'" >
+           			AND T2.groupId = #{con_groupId}
+          		</if>
+                And T2.orderState not in ( '01','02')
+                And T2.deletedYn='N'
+                group by T2.orderCode
+		) As TOT
+        
+</select>
+
+<select id="getOrderDetail"  resultMap="orderVO" parameterType="com.offact.addys.vo.order.OrderVO" >
+
+  Select T1.orderCode,
+         T1.deliveryCharge,
+         T1.deliveryEtc,
+         T1.email,
+         T1.mobilePhone,
+         T1.telNumber,
+         T1.faxNumber,
+         T1.orderDate,
+         T1.deliveryDate,
+         T1.deliveryMethod,
+         T1.orderCharge,
+         T1.orderEtc,
+         T1.orderMobilePhone,
+         T1.orderEmail,
+         T1.orderTelNumber,
+         T1.orderFaxNumber,
+         T1.orderAddress,
+         T1.payMethod,
+         T1.sms,
+         T1.memo,
+         count(T2.idx) as memoCnt,
+         T1.orderState, 
+         T1.groupId,
+         T1.companyCode,
+         T1.deliveryName,
+         T1.orderName,
+         replace(T1.transDate,'-','') as transDate
+  From adOrder as T1
+       Left Join adComment T2 On T1.orderCode = T2.orderCode And T2.commentCategory='03'
+  Where T1.orderCode = #{orderCode}
+  
+ 	
+</select>
+
+<select id="getOrderDetailList"  resultMap="orderVO" parameterType="com.offact.addys.vo.order.OrderVO" >
+
+    Select T1.orderCode,
+           T2.groupId,
+           T3.groupName,
+		   T2.companyCode,
+		   T5.barCode,
+           T4.companyName,
+           T1.productCode,
+           T5.productName,
+           T1.stockDate,
+	   	   T1.stockCnt,
+	   	   T1.safeStock,
+	   	   T1.holdStock,
+	   	   T5.productPrice,
+	   	   <!--
+	   	   T1.orderPrice,
+	   	   format(T1.orderPrice,0) as orderPriceView,
+	   	   T1.orderResultPrice,
+	   	   format(T1.orderResultPrice,0) as orderResultPriceView,
+	   	   -->
+	   	   T5.productPrice as orderPrice,
+	   	   format(T5.productPrice,0) as orderPriceView,
+	   	   Case When T2.orderState in ('03','05') Then T5.productPrice Else T1.orderResultPrice End orderResultPrice,
+	   	   Case When T2.orderState in ('03','05') Then format(T5.productPrice,0) Else format(T1.orderResultPrice,0) End orderResultPriceView,
+	   	   
+           T5.vatRate,
+           T1.orderVatRate,
+           T1.orderCnt,
+           T1.orderResultCnt,
+           T1.addCnt,
+           T1.lossCnt,
+           T1.etc,
+           (select count(T6.idx) from adComment T6 Where T1.orderCode = T6.orderCode  And T1.productCode=T6.productCode And T6.commentCategory='04') as etcCnt,
+           T1.deferCheck,
+           T1.orderCheck,
+           T2.orderState,
+           <!--
+           case When T1.orderPrice = T1.orderResultPrice Then 1 Else 0 End priceOrder ,
+           -->
+           case When T2.orderState not in ('03','05') And T5.productPrice <![CDATA[<>]]> T1.orderResultPrice Then 0 Else 1 End priceOrder ,
+            
+           case When T1.orderCnt = T1.orderResultCnt Then 1 Else 0 End cntOrder ,
+           case When T1.safeStock > T1.stockCnt Then 0 Else 1 End stockOrder
+  From adOrderDetail T1
+       Left Join adOrder T2 On T1.orderCode=T2.orderCode
+       Left Join ofGroup T3 On T2.groupId =T3.groupId
+       Left Join adCompany T4 On T2.companyCode = T4.companyCode
+       Left Join adProductMaster T5 On T1.productCode = T5.productCode
+  Where T1.orderCode = #{orderCode}
+    Order by 
+    <!--
+    (case When T1.orderPrice = T1.orderResultPrice Then 1 Else 0 End ) ASC ,
+    -->
+    (case When T2.orderState not in ('03','05') And T5.productPrice = T1.orderResultPrice Then 1 Else 0 End ) ASC ,
+    (case When T1.orderCnt = T1.orderResultCnt Then 1 Else 0 End ) ASC ,
+    (case When T1.safeStock >= T1.stockCnt Then 0 Else 1 End ) ASC, 
+    (select count(T6.idx) from adComment T6 Where T1.orderCode = T6.orderCode  And T1.productCode=T6.productCode And T6.commentCategory='04') DESC,
+    T5.productName ASC
+</select>
+
+<insert id="deferReasonInsert"  parameterType="com.offact.addys.vo.order.OrderVO" >
+		insert into adComment (
+				 orderCode
+				,commentCategory
+            	,commentType
+            	,comment 
+            	,commentDateTime
+            	,commentUserId
+		)values(
+				 #{orderCode}
+				, '02'
+	  			, #{deferType}
+	  			, #{deferReason}
+	  			, now()
+	  			, #{deferUserId}
+		)
+		                        
+</insert>
+
+<update id="updateDefer"  parameterType="com.offact.addys.vo.order.OrderVO" >
+		update adOrder 
+			set
+				orderState = #{orderState}
+            	,deferUserId = #{deferUserId}
+            	,deferDateTime = now()
+		where orderCode = #{orderCode}
+		                        
+</update>
+
+<update id="updateDeferCancel"  parameterType="com.offact.addys.vo.order.OrderVO" >
+		update adOrderDetail 
+			set
+				orderResultPrice = orderPrice
+            	,orderResultCnt = orderCnt
+            	,orderVatRate = vatRate
+            	,orderCheck = 'N'
+            	,updateUserId = #{deferUserId}
+            	,updateDateTime = now()
+		where orderCode = #{orderCode}
+		                        
+</update>
+
+<update id="updateDeferDetail"  parameterType="com.offact.addys.vo.order.OrderVO" >
+	
+		update adOrderDetail 
+			set
+				orderResultPrice = #{orderResultPrice}
+            	,orderResultCnt = #{orderResultCnt}
+            	,orderVatRate = #{orderVatRate}
+            	,updateUserId = #{updateUserId}
+            	,etc = #{etc}
+            	,updateDateTime = now()
+		where orderCode = #{orderCode}
+	  		  and productCode = #{productCode}
+
+		                        
+</update>
+
+<update id="checkDeletesProc" parameterType="com.offact.addys.vo.order.OrderVO" >
+        Update adOrderDetail
+       		Set
+  				orderCheck = 'N'
+ 		Where orderCode = #{orderCode}
+ 		
+</update>
+
+<update id="checkUpdateProc" parameterType="java.util.Map" >
+        Update adOrderDetail
+       		Set
+  				orderCheck = 'Y'
+ 		Where orderCode = #{orderCode}
+ 			  And productCode = #{productCode}
+</update>
+
+<update id="updateCancelOrder"  parameterType="com.offact.addys.vo.order.OrderVO" >
+		update adOrder 
+			set
+				orderState = #{orderState}
+            	,deletedUserId = #{deletedUserId}
+            	,deletedDateTime = now()
+            	,deletedYn='Y'
+		where orderCode = #{orderCode}
+		                        
+</update>
+
+<update id="updateOrderDetail"  parameterType="com.offact.addys.vo.order.OrderVO" >
+	
+		update adOrderDetail 
+			set
+				 deletedYn = #{deletedYn}
+            	,updateUserId = #{updateUserId}
+            	,updateDateTime = now()
+		where orderCode = #{orderCode}
+		                        
+</update>
+
+<update id="updateBuyOrder"  parameterType="com.offact.addys.vo.order.OrderVO" >
+		update adOrder 
+			set
+				orderState = #{orderState}
+            	,buyUserId = #{buyUserId}
+            	,buyDateTime = now()
+            	,buyResult = 'Y'
+		where orderCode = #{orderCode}
+		                        
+</update>
+
+<update id="updateCheck"  parameterType="com.offact.addys.vo.order.OrderVO" >
+		update adOrder 
+			set
+				orderState = #{orderState}
+            	,chkUserId = #{buyUserId}
+            	,chkDateTime = now()
+            	,transDate = #{transDate}
+		where orderCode = #{orderCode}
+		                        
+</update>
+
+<insert id="updateCheckDetail"  parameterType="com.offact.addys.vo.order.OrderVO" >
+	
+insert into adOrderDetail (
+							orderCode
+							,productCode
+							,orderPrice
+							,orderResultPrice
+							,orderCnt
+							,orderResultCnt
+							,orderVatRate
+							,createUserId
+							,orderCheck
+							,createDateTime
+					)values(
+							 #{orderCode}
+							,#{productCode}
+							,ifnull(#{orderResultPrice},0)
+							,#{orderResultPrice}
+							,ifnull(#{orderCnt},0)
+							,#{orderResultCnt}
+							,#{orderVatRate}
+							,#{updateUserId}
+							, 'Y'
+							, now()			
+		
+					) 
+					ON DUPLICATE KEY UPDATE orderResultPrice = #{orderResultPrice}
+					                        ,orderResultPrice = #{orderResultPrice}
+            	                            ,orderResultCnt = #{orderResultCnt}
+            	                            ,orderVatRate = #{orderVatRate}
+            	                            ,updateUserId = #{updateUserId}
+            	                            ,orderCheck = 'Y'
+            	                            ,updateDateTime = now()
+                        
+</insert>
+
+<select id="getCheckAddList"  resultMap="orderVO" parameterType="com.offact.addys.vo.order.OrderVO" >
+	select T1.barCode,
+       	   T2.productCode,
+           T2.productName,
+           T2.productPrice,
+           format(T2.productPrice,0) as orderResultPriceView,
+           Sum(T1.cnt) as orderResultCnt ,
+           Case When T2.productCode is null Then '02' Else '01' End productChk
+                       From (
+                            	 ${checkAddList}
+                             ) as T1
+                             Left Join adProductMaster T2 On T1.barCode=T2.barCode
+                             group By T1.barCode,
+                                      T2.productCode,
+                                      T2.productName,
+                                      T2.productPrice
+                             order by productChk ,productName
+</select>
+
+</mapper>
